@@ -32,7 +32,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.featureItem}>
             <FontAwesome name="trophy" size={20} color="#2e86ab" />
-            <Text style={styles.featureText}>Classements et défis</Text>
+            <Text style={styles.featureText}>Système de points et classements</Text>
           </View>
         </View>
       </View>
