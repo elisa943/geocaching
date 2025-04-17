@@ -15,11 +15,6 @@
 - ✏️ Commentaires sur les caches trouvées
 - 🏷️ Filtres par difficulté/créateur
 
-### 📱 Client Mobile
-- Carte interactive (React Native Maps)
-- Profil utilisateur avec historique
-- Notification des nouvelles caches à proximité
-
 ### Système de points
 Chaque utilisateur peut gagner des points en fonction de la difficulté du cache récupéré ! 
 
@@ -30,6 +25,38 @@ Chaque utilisateur peut gagner des points en fonction de la difficulté du cache
 | 3           | 30            |
 | 4           | 50            |
 | 5           | 100           |
+
+### Architecture 
+geocaching
+├── README.md
+├── client
+│   ├── App.js
+│   ├── app
+│   ├── app.json
+│   ├── assets
+│   ├── components
+│   ├── constants
+│   ├── expo-env.d.ts
+│   ├── hooks
+│   ├── node_modules
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── scripts
+│   ├── tsconfig.json
+│   └── utils
+└── server
+    ├── Makefile
+    ├── clean.js
+    ├── config
+    ├── controllers
+    ├── middlewares
+    ├── models
+    ├── node_modules
+    ├── package-lock.json
+    ├── package.json
+    ├── routes
+    ├── server.js
+    └── utils
 
 ## Commandes à effectuer pour démarrer l'application 
 
