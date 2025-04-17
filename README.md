@@ -1,21 +1,27 @@
 # PG219 : Projet Développement Avancé | 🌍 GeoCache
 
 **Une application mobile de géocaching avec Node.js, MongoDB et React Native.**  
+L'objectif de ce projet est de proposer une application permettant aux utilisateurs de créer, chercher et découvrir des géocaches. 
 
 ## 📌 Fonctionnalités Implémentées
 
 ### 🔐 Authentification
-- **Inscription/Connexion** avec JWT (24h de validité)
+- Inscription, connexion, et déconnexion sécurisée avec les jetons JWT (24h de validité)
+- Hachage des mots de passe
 - Protection des routes backend par middleware d'authentification
-- Déconnexion sécurisée
+- Récupération automatique des infos utilisateur à partir du token
 
 ### 🗺️ Géocaches
-- ✅ Ajout/modification/suppression de caches (uniquement par le propriétaire)
-- 📍 Affichage des caches proches (coordonnées GPS)
-- ✏️ Commentaires sur les caches trouvées
-- 🏷️ Filtres par difficulté/créateur
+- Les attributs des caches sont : `id`, `latitude`, `longitude`, `creator`, `description`, `difficulty`
+- Ajout et modification de caches par le propriétaire 
+- Suppression automatique du cache lorsqu’il est découvert par un autre utilisateur
 
-### Système de points
+### 📍 Marqueurs & Cartographie
+- Affichage, ajout, modification et suprression des caches directement sur la carte dynamique dans l'application React Native via WebView (Leaflet.js)
+- Chargement des marqueurs depuis une base de données MongoDB
+- Filtrage des caches affichés selon leur niveau de difficulté
+
+## Système de points
 Chaque utilisateur peut gagner des points en fonction de la difficulté du cache récupéré ! 
 
 | Difficulté  | Points gagnés |
@@ -26,7 +32,10 @@ Chaque utilisateur peut gagner des points en fonction de la difficulté du cache
 | 4           | 50            |
 | 5           | 100           |
 
-### Architecture 
+## Organisation et Architecture 
+
+### Organisation du projet 
+```
 geocaching
 ├── README.md
 ├── client
@@ -57,20 +66,29 @@ geocaching
     ├── routes
     ├── server.js
     └── utils
+```
+
+### ⚙️ Stack Technique
+
+| Côté client (mobile) | Côté serveur (API REST) |
+|----------------------|--------------------------|
+| React Native (Expo)  | Node.js + Express        |
+| Leaflet (via WebView) | MongoDB (via Mongoose)  |
+| JWT, Axios           | Bcrypt, CORS             |
+
 
 ## Commandes à effectuer pour démarrer l'application 
 
 ### Lancer le serveur :
 
 ```bash
-npm install # Pour vérifier 
-npm run dev # Pour le développement
-npm start # Pour la production
+npm install # pour installer les paquets
+npm start 
 ```
 
 ### Pour lancer le client : 
 ```
-npm install # Pour vérifier
+npm install
 npm run web
 ```
 
@@ -78,40 +96,3 @@ npm run web
 ```
 npx create-expo-app@latest
 ```
-
-## Organisation en arbre
-```
-geocaching/
-├── README.md
-├── client
-│   ├── Makefile
-│   ├── README.md
-│   ├── app
-│   ├── app.json
-│   ├── assets
-│   ├── components
-│   ├── constants
-│   ├── expo-env.d.ts
-│   ├── hooks
-│   ├── node_modules
-│   ├── package-lock.json
-│   ├── package.json
-│   ├── scripts
-│   └── tsconfig.json
-└── server
-    ├── Makefile
-    ├── app.js
-    ├── config
-    ├── controllers
-    ├── middlewares
-    ├── models
-    ├── node_modules
-    ├── package-lock.json
-    ├── package.json
-    ├── routes
-    ├── server.js
-    └── utils
-```
-
-
-
