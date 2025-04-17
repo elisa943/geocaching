@@ -1,5 +1,5 @@
 require('dotenv').config();
-console.log('JWT_SECRET chargé ?', process.env.JWT_SECRET ? 'OUI' : 'NON'); // Debug
+console.log('JWT_SECRET chargé ?', process.env.JWT_SECRET ? '✓' : '✖︎'); // Debug
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
@@ -15,7 +15,7 @@ app.use(cors({
     'http://10.188.133.109:19006', // Web
     'http://10.188.133.109:8081', // Tunnel Expo (mobile/émulateur)
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Ajoutez OPTIONS
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));

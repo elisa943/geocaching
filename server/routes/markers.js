@@ -23,7 +23,7 @@ router.put('/:id', async (req, res) => {
     res.json(updated);
 });
 
-// DELETE marker : not implemented yet
+// DELETE marker
 router.delete('/:id', async (req, res) => {
     await Marker.findOneAndDelete({ id: req.params.id });
     res.status(204).end();

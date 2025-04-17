@@ -6,5 +6,4 @@ class ErrorResponse extends Error {
     }
   }
   
-  // Exportez la classe correctement
-  module.exports = ErrorResponse;
+module.exports = ErrorResponse;
