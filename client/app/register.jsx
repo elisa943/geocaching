@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { View, TextInput, Button, Alert, StyleSheet, Text } from 'react-native';
-import { Link, router } from 'expo-router';
+import { View, TextInput, Button, StyleSheet, Text } from 'react-native';
+import { Link } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 
 export default function RegisterScreen() {
   const [pseudo, setPseudo] = useState('');
@@ -8,6 +9,7 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
+  const navigation = useNavigation();
 
   const handleRegister = async () => {
     setMessage('');
@@ -18,7 +20,7 @@ export default function RegisterScreen() {
     }
 
     try {
-      const response = await fetch('http://10.188.133.109:5001/api/auth/register', {
+      const response = await fetch('http://10.0.2.2:5001/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pseudo, email, password }),
@@ -33,7 +35,7 @@ export default function RegisterScreen() {
 
       setMessage("Compte créé avec succès !");
       setTimeout(() => {
-        router.replace('/login');
+        navigation.navigate('login');
       }, 1000);
 
     } catch (error) {

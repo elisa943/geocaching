@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, TextInput, Button, Alert, StyleSheet } from 'react-native';
-import { Link, router } from 'expo-router';
+import { View, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../components/AuthContext';
 
@@ -9,15 +9,19 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const { authStatus, setAuthStatus } = useAuth();
 
+
+  const navigation = useNavigation();
+
   useEffect(() => {
     if (authStatus === 'authenticated') {
-      router.replace('/explore'); // l'user est redirigé s'il est déjà connecté
+      navigation.replace('explore'); // Redirection vers l'écran "explore"
     }
-  }, [authStatus]);
+  }, [authStatus, navigation]); // Assurez-vous que navigation est dans les dépendances
+
 
   const handleLogin = async () => {
     try {
-      const response = await fetch('http://10.188.133.109:5001/api/auth/login', {
+      const response = await fetch('http://10.0.2.2:5001/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -27,26 +31,23 @@ export default function LoginScreen() {
   
       if (response.ok) {
         await AsyncStorage.setItem('userToken', data.token);
-        
         if (data.pseudo) {
           await AsyncStorage.setItem('pseudo', data.pseudo);
-        } else {
-          // Vérifiez si le pseudo existe peut-être dans un sous-objet
-          console.warn('Structure de la réponse:', JSON.stringify(data));
         }
+
   
-        await setAuthStatus('authenticated');
-        router.push('/explore');
+        await setAuthStatus('authenticated');  
+  
+        navigation.replace('explore');
       } else {
-        window.alert(data.message || 'Erreur de connexion');
+        Alert.alert('Identifiants invalides', data.message || 'Une erreur est survenue. Veuillez réessayer.');
       }
-  
     } catch (error) {
       console.error('Erreur complète:', error);
-      window.alert(error.message);
+      Alert.alert(error.message);
     }
   };
-
+  
   return (
     <View style={styles.container}>
       <TextInput
@@ -65,9 +66,6 @@ export default function LoginScreen() {
         onChangeText={setPassword}
       />
       <Button title="Se connecter" onPress={handleLogin} />
-      <Link href="/register" style={styles.link}>
-        Créer un compte
-      </Link>
     </View>
   );
 }
@@ -85,10 +83,5 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     padding: 10,
     borderRadius: 5,
-  },
-  link: {
-    marginTop: 15,
-    color: 'blue',
-    textAlign: 'center',
   },
 });

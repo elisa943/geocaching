@@ -9,11 +9,14 @@ import axios from 'axios'; // Assurez-vous d'avoir axios installé
 
 type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
 
-// Ajout d'un type pour les données utilisateur
 interface UserData {
   _id: string;
   pseudo: string;
   email: string;
+  points: number;
+  caches_created: number;
+  caches_found: number;
+  mean_difficulty: number;
 }
 
 // L'interface AuthContextType définit la structure du contexte d'authentification.
@@ -26,73 +29,110 @@ interface AuthContextType {
   fetchUserData: () => Promise<void>; // Fonction pour récupérer les données
 }
 
-const AuthContext = createContext<AuthContextType>({
-  authStatus: 'unauthenticated',
-  setAuthStatus: () => {},
+export const AuthContext = createContext<{
+  userData: any;
+  authStatus: 'authenticated' | 'unauthenticated' | 'loading';
+  refreshUserData: () => Promise<void>;
+}>({
   userData: null,
-  fetchUserData: async () => {},
+  authStatus: 'loading',
+  refreshUserData: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [authStatus, setAuthStatusState] = useState<AuthStatus>('checking');
     const [userData, setUserData] = useState<UserData | null>(null);
 
-    // Fonction pour récupérer les données utilisateur depuis l'API
     const fetchUserData = async () => {
-        try {
-            const token = await AsyncStorage.getItem('userToken');
-            if (!token) {
-                setUserData(null);
-                return;
-            }
-
-            const response = await axios.get('http://10.188.133.109:5001/api/auth/me', {
-                headers: {
-                  Authorization: `Bearer ${token}`
-                }
-            });
-
-          if (response.data.success) {
-              setUserData(response.data.data);
-          }
-        } catch (error) {
-              console.error('Erreur lors de la récupération des données utilisateur:', error);
-              // En cas d'erreur comme un token expiré, on déconnecte l'utilisateur
-              setAuthStatus('unauthenticated');
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        if (!token) {
+          setUserData(null);
+          return;
         }
+    
+        const response = await axios.get('http://10.0.2.2:5001/api/auth/me', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+    
+        if (response.data.success) {
+          setUserData(response.data.data);
+        } else {
+          throw new Error('Utilisateur non valide');
+        }
+    
+      } catch (error) {
+        console.error('Erreur lors de la récupération des données utilisateur:', error);
+    
+        await AsyncStorage.removeItem('userToken');
+        setUserData(null);
+        setAuthStatus('unauthenticated');
+      }
     };
+    
 
-  const setAuthStatus = async (status: AuthStatus) => {
+    const setAuthStatus = async (status: AuthStatus) => {
       setAuthStatusState(status);
       if (status === 'unauthenticated') {
-          await AsyncStorage.removeItem('userToken');
-          setUserData(null); // Vider les données utilisateur à la déconnexion
+        await AsyncStorage.removeItem('userToken');
+        setUserData(null); // Vider les données utilisateur à la déconnexion
       } else if (status === 'authenticated') {
-          // Récupérer les données utilisateur quand l'authentification est validée
-          await fetchUserData();
+        // Récupérer les données utilisateur quand l'authentification est validée
+        await fetchUserData();
       }
-  };
+    };
 
-  useEffect(() => {
+    useEffect(() => {
       const checkAuthStatus = async () => {
-          const token = await AsyncStorage.getItem('userToken');
-          if (token) {
-              setAuthStatusState('authenticated');
-              // Récupérer les données utilisateur au chargement si un token existe
-              await fetchUserData();
-          } else {
-              setAuthStatusState('unauthenticated');
-          }
+        const token = await AsyncStorage.getItem('userToken');
+        if (token) {
+          setAuthStatusState('authenticated');
+          await fetchUserData(); // Récupérer les données utilisateur
+        } else {
+          setAuthStatusState('unauthenticated');
+        }
       };
-      setAuthStatus('checking'); // Initialiser l'état à 'checking' avant de vérifier le token
       checkAuthStatus();
-  }, []);
+    }, []);    
+    
 
-  return (
-      <AuthContext.Provider value={{ authStatus, setAuthStatus, userData, fetchUserData }}>
-          {children}
-      </AuthContext.Provider>
-  );
+
+    const refreshUserData = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        if (!token) {
+          setUserData(null);
+          setAuthStatus('unauthenticated');
+          return;
+        }
+        const res = await axios.get('http://10.0.2.2:5001/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.success) {
+          setUserData(res.data.data);
+          setAuthStatus('authenticated');
+        } else {
+          throw new Error();
+        }
+      } catch {
+        await AsyncStorage.removeItem('userToken');
+        setUserData(null);
+        setAuthStatus('unauthenticated');
+      }
+    };
+
+    // On monte le contexte, on charge l’utilisateur
+    useEffect(() => {
+      refreshUserData();
+    }, []);
+
+    return (
+        <AuthContext.Provider value={{ authStatus, setAuthStatus, userData, fetchUserData, refreshUserData }}>
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
 export const useAuth = () => {

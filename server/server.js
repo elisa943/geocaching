@@ -5,6 +5,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth.routes');
 const markerRoutes = require('./routes/markers');
+const userRoutes = require('./routes/users');
 
 // Initialisation
 const app = express();
@@ -12,8 +13,8 @@ const app = express();
 // Middlewares
 app.use(cors({
   origin: [
-    'http://10.188.133.109:19006', // Web
-    'http://10.188.133.109:8081', // Tunnel Expo (mobile/émulateur)
+    'http://10.0.2.2:19006', // Web
+    'http://10.0.2.2:8081', // Tunnel Expo (mobile/émulateur)
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -24,6 +25,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/markers', markerRoutes);
+app.use('/api', userRoutes);
 
 // Routes non trouvées
 const errorHandler = require('./middlewares/error');

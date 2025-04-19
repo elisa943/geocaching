@@ -1,15 +1,11 @@
-import { Stack } from 'expo-router';
-import { AuthProvider } from '../components/AuthContext'; // ou où tu l’as mis
+// app/_layout.tsx
+import { Slot } from 'expo-router';
+import { AuthProvider } from '../components/AuthContext'; 
 
-export default function Layout() {
+export default function RootLayout() {
   return (
     <AuthProvider>
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ title: 'Connexion' }} />
-        <Stack.Screen name="register" options={{ title: 'Inscription' }} />
-        <Stack.Screen name="explore" options={{ title: 'Explorer' }} />
-      </Stack>
+      <Slot />
     </AuthProvider>
   );
 }

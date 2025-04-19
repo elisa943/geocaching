@@ -17,3 +17,12 @@ router.put('/:id', async (req, res) => {
     res.json(updated);
 }
 );
+
+// GET all users
+router.get('/users', async (req, res) => {
+    const users = await User.find();
+    res.json(users);
+    }
+);
+
+module.exports = router;

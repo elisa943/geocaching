@@ -1,445 +1,414 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState, useRef } from 'react';
-import 'leaflet/dist/leaflet.css';
+import { View, StyleSheet, Modal, TextInput, Text, Button, Alert } from 'react-native';
+import WebView from 'react-native-webview';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Slider from '@react-native-community/slider';
 
-const WebMap = ({ selectedDifficulty }) => {
-    if (selectedDifficulty === null) {
-        selectedDifficulty = "0"
-    } 
-    selectedDifficulty = Number(selectedDifficulty);
-    console.log("selectedDifficulty: ", selectedDifficulty);
-    
-    const [markers, setMarkers] = useState<{ id: string; lat: number; lng: number; creator: string; difficulty: number; description?: string }[]>([]);
-    const [showForm, setShowForm] = useState(false);
-    const [newMarkerData, setNewMarkerData] = useState<{ lat: number; lng: number; difficulty: number; description: string | undefined } | null>(null);
-
-    const mapRef = useRef<L.Map | null>(null);
-    const markersRef = useRef<L.Marker[]>([]);
-    const [editingMarkerId, setEditingMarkerId] = useState<string | null>(null);
-
-    const [currentUser, setCurrentUser] = useState<string | null>(null);
-
-    useEffect(() => {
-        const fetchCurrentUser = async () => {
-            const pseudo = await AsyncStorage.getItem('pseudo');
-            setCurrentUser(pseudo);
-        };
-    
-        fetchCurrentUser();
-    }, []);
-
-    const fetchMarkers = async () => {
-        try {
-            const response = await fetch('http://10.188.133.109:5001/markers', {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-            });
-            const rawData = await response.json();
-            const converted = rawData.map((m: any) => ({
-                id: m.id,
-                lat: m.latitude,
-                lng: m.longitude,
-                creator: m.userId,
-                difficulty: Number(m.difficulty ?? 1),
-                description: m.description ?? ''
-            }));
-            
-            //setMarkers(converted); // Mettre à jour l'état avec les marqueurs convertis
-            //console.log('Marqueurs récupérés :', converted);
-            const filtered = converted.filter(marker => 
-                selectedDifficulty === 0 || marker.difficulty === selectedDifficulty
-            );
-            setMarkers(filtered);
-            
-
-        } catch (error) {
-            console.error('Erreur lors de la récupération des marqueurs :', error);
-        }
-    };
-
-    useEffect(() => {
-        if (!mapRef.current) {
-            const L = require('leaflet');
-
-            delete L.Icon.Default.prototype._getIconUrl;
-            L.Icon.Default.mergeOptions({
-                iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-            });
-
-            mapRef.current = L.map('map').setView([44.8378, -0.5792], 13);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(mapRef.current);
-
-            mapRef.current.on('click', (e: L.LeafletMouseEvent) => {
-                const { lat, lng } = e.latlng;
-                setNewMarkerData({ lat, lng, difficulty: 1, description: '' });
-                setShowForm(true);
-            });
-        }
-
-        // Appel de fetchMarkers juste après l'initialisation de la carte
-        fetchMarkers();
-
-        return () => {
-            if (mapRef.current) {
-                mapRef.current.remove();
-                mapRef.current = null;
-            }
-        };
-    }, []);
-
-    useEffect(() => {
-        fetchMarkers();
-    }, [selectedDifficulty]);
-    
-
-    useEffect(() => {
-        if (!mapRef.current) return;
-
-        const L = require('leaflet');
-        
-        // Suppression des marqueurs existants 
-        markersRef.current.forEach(marker => marker.remove());
-        markersRef.current = [];
-        
-        const difficultyColors = ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#F44336'];
-        // TODO : à modifier ? 
-        markers.forEach(({ id, lat, lng, creator, difficulty, description }) => {
-            if (selectedDifficulty === 0 || selectedDifficulty === difficulty) {
-                // Création d'une icône personnalisée avec une couleur différente selon la difficulté
-                const markerColor = difficultyColors[Math.min(5, Math.max(1, difficulty)) - 1];
-                
-                const customIcon = L.divIcon({
-                    className: 'custom-marker',
-                    html: `
-                        <div style="
-                            background: ${markerColor};
-                            width: 2rem;
-                            height: 2rem;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            position: relative;
-                            border-radius: 50% 50% 50% 0;
-                            transform: rotate(-45deg);
-                            box-shadow: -1px 1px 4px rgba(0,0,0,0.3);
-                        ">
-                            <div style="
-                                transform: rotate(45deg);
-                                color: white;
-                                font-weight: bold;
-                                font-size: 0.8rem;
-                                text-align: center;
-                                width: 100%;
-                                position: absolute;
-                                top: 50%;
-                                left: 50%;
-                                transform: translate(-50%, -50%) rotate(45deg);
-                            ">
-                                ${difficulty}
-                            </div>
-                        </div>
-                    `,
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 24]
-                });
-
-                const marker = L.marker([lat, lng], { icon: customIcon })
-                    .addTo(mapRef.current!)
-                    .bindPopup(
-                        `
-                        <div style="
-                            font-family: 'Segoe UI', Roboto, sans-serif;
-                            padding: 0.5rem;
-                            min-width: 200px;
-                            border-radius: 4px;
-                        ">
-                            <div style="
-                                background: #4a6fa5;
-                                color: white;
-                                padding: 0.5rem;
-                                margin: -0.5rem -0.5rem 0.5rem -0.5rem;
-                                font-weight: 500;
-                                border-radius: 4px 4px 0 0;
-                                font-size: 0.9rem;
-                            ">
-                                Cache
-                            </div>
-                            <p><strong>Créateur :</strong> ${creator}</p>
-                            <p><strong>Difficulté :</strong> ${difficulty}</p>
-                            ${description ? `<p><strong>Description:</strong> ${description}</p>` : ''}
-                            
-                            ${creator === currentUser ? `
-                            <button style="
-                                background: #4a6fa5;
-                                border: none;
-                                color: white;
-                                padding: 0.5rem;
-                                border-radius: 4px;
-                                cursor: pointer;
-                                margin-top: 0.5rem;
-                                width: 100%;
-                                font-size: 0.8rem;
-                                transition: opacity 0.2s;
-                            " id="edit-${id}">
-                                Modifier
-                            </button>
-                            ` : `
-                            <button style="
-                                background:rgb(19, 157, 12);
-                                border: none;
-                                color: white;
-                                padding: 0.5rem;
-                                border-radius: 4px;
-                                cursor: pointer;
-                                margin-top: 0.5rem;
-                                width: 100%;
-                                font-size: 0.8rem;
-                                transition: opacity 0.2s;
-                            " id="found-${id}">
-                                Trouvé !
-                            </button>
-                            `}
-                        </div>
-                        `,
-                        { className: 'modern-popup' }
-                    )
-                    .on('popupopen', () => {
-                        setTimeout(() => {
-                            const btn = document.getElementById(`edit-${id}`);
-                            if (btn) {
-                                btn.onclick = () => {
-                                    setNewMarkerData({ lat, lng, difficulty, description });
-                                    setEditingMarkerId(id);
-                                    setShowForm(true);
-                                    mapRef.current?.closePopup();
-                                };
-                            }
-                    
-                            const foundBtn = document.getElementById(`found-${id}`);
-                            if (foundBtn) {
-                                foundBtn.onclick = async () => {
-                                    await fetch(`http://10.188.133.109:5001/markers/${id}`, {
-                                        method: 'DELETE',
-                                        headers: { 'Content-Type': 'application/json' },
-                                    });
-                                    setMarkers(prev => prev.filter(m => m.id !== id));
-                                    mapRef.current?.removeLayer(marker);
-                                    mapRef.current?.closePopup();
-                                };
-                            }
-                        }, 0);
-                    });
-            
-                markersRef.current.push(marker);
-            }
-        });
-        
-    }, [markers]);
-
-    const handleFormSubmit = async () => {
-        if (newMarkerData) {
-            try {
-                const pseudo = await AsyncStorage.getItem('pseudo');
-    
-                const newMarker = {
-                    id: editingMarkerId || `${Date.now()}`,
-                    lat: newMarkerData.lat,
-                    lng: newMarkerData.lng,
-                    creator: pseudo || 'Inconnu',
-                    difficulty: newMarkerData.difficulty,
-                    description: newMarkerData.description,
-                };
-                
-
-                
-                if (editingMarkerId) { // 
-                    setMarkers(prev => prev.map(m => m.id === editingMarkerId ? newMarker : m));
-                    setEditingMarkerId(null);
-
-                    await fetch(`http://10.188.133.109:5001/markers/${editingMarkerId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            latitude: newMarker.lat,
-                            longitude: newMarker.lng,
-                            difficulty: newMarker.difficulty,
-                            description: newMarker.description,
-                            type: 'standard',
-                            userId: newMarker.creator
-                        })
-                    });
-                } else {
-                    await fetch('http://10.188.133.109:5001/markers', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            id: newMarker.id,
-                            latitude: newMarker.lat,
-                            longitude: newMarker.lng,
-                            difficulty: Number(newMarker.difficulty),
-                            description: newMarker.description,
-                            type: 'standard',
-                            userId: newMarker.creator,
-                            creator: pseudo || 'Inconnu'
-                        })
-                    });
-                    setMarkers(prev => [...prev, newMarker]);
-                }
-                
-                setShowForm(false);
-                setNewMarkerData(null);
-                await fetchMarkers();
-            } catch (error) {
-                console.error('Erreur lors de la récupération du pseudo :', error);
-            }
-        }
-    };
-
-    return (
-        <>
-            <div id="map" style={{ height: '100vh', width: '100%' }} />
-            {showForm && (
-                <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    backgroundColor: 'white',
-                    padding: '1rem',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-                    zIndex: 1000,
-                    fontFamily: "'Segoe UI', Roboto, sans-serif",
-                    width: '320px',
-                    maxWidth: '90vw',
-                    border: '1px solid #e0e0e0'
-                }}>
-                    <h3 style={{
-                        marginTop: '0',
-                        color: '#333',
-                        fontWeight: '600',
-                        textAlign: 'center',
-                        marginBottom: '1.25rem',
-                        fontSize: '1.1rem'
-                    }}>
-                        {editingMarkerId ? 'Modifier le cache' : 'Ajouter un cache'}
-                    </h3>
-                    
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label style={{
-                            display: 'block',
-                            marginBottom: '0.5rem',
-                            color: '#666',
-                            fontWeight: '500'
-                        }}>
-                            Difficulté (1-5)
-                        </label>
-                        <input
-                            type="range"
-                            min="1"
-                            max="5"
-                            value={newMarkerData?.difficulty || 1}
-                            onChange={(e) => setNewMarkerData(prev => prev ? { ...prev, difficulty: parseInt(e.target.value, 10) } : null)}
-                            style={{
-                                width: '100%',
-                                height: '8px',
-                                borderRadius: '4px',
-                                background: 'linear-gradient(90deg, #4CAF50, #F44336)',
-                                outline: 'none',
-                                appearance: 'none'
-                            }}
-                        />
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            marginTop: '0.5rem',
-                            color: '#666',
-                            fontSize: '0.8rem'
-                        }}>
-                            <span>1</span>
-                            <span>2</span>
-                            <span>3</span>
-                            <span>4</span>
-                            <span>5</span>
-                        </div>
-                    </div>
-                    
-                    <div style={{ marginBottom: '0.5rem' }}>
-                        <label style={{
-                            display: 'block',
-                            marginBottom: '0.5rem',
-                            color: '#666',
-                            fontWeight: '500'
-                        }}>
-                            Description
-                        </label>
-                        <textarea
-                            value={newMarkerData?.description || ''}
-                            onChange={(e) => setNewMarkerData(prev => prev ? { ...prev, description: e.target.value } : null)}
-                            style={{
-                                width: '90%',
-                                padding: '0.9rem',
-                                border: '1px solid #ddd',
-                                borderRadius: '6px',
-                                minHeight: '80px',
-                                resize: 'vertical',
-                                fontFamily: 'inherit',
-                                fontSize: '0.9rem'
-                            }}
-                            placeholder=""
-                        />
-                    </div>
-                    
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: '0.75rem',
-                        marginTop: '1rem'
-                    }}>
-                        <button 
-                            onClick={() => setShowForm(false)}
-                            style={{
-                                flex: 1,
-                                padding: '0.6rem',
-                                backgroundColor: '#f5f5f5',
-                                color: '#555',
-                                border: '1px solid #ddd',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                                transition: 'all 0.2s',
-                                fontSize: '0.9rem'
-                            }}
-                        >
-                            Annuler
-                        </button>
-                        <button 
-                            onClick={handleFormSubmit}
-                            style={{
-                                flex: 1,
-                                padding: '0.6rem',
-                                backgroundColor: '#4a6fa5',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                                transition: 'all 0.2s',
-                                fontSize: '0.9rem'
-                            }}
-                        >
-                            {editingMarkerId ? 'Modifier' : 'Ajouter'}
-                        </button>
-                    </div>
-                </div>
-            )}
-        </>
-    );
+const difficultyColors = {
+  1: 'green',
+  2: '#f3d125',
+  3: 'orange',
+  4: 'red',
+  5: 'purple',
 };
+
+const WebMap = ({ selectedDifficulty, setMarkers }) => {
+  const [webViewLoaded, setWebViewLoaded] = useState(false);
+  const [markers, setLocalMarkers] = useState([]);
+  const webViewRef = useRef(null);
+  const [newMarkerData, setNewMarkerData] = useState(null);
+  const [selectedMarkerId, setSelectedMarkerId] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [editingMarkerId, setEditingMarkerId] = useState(null);
+
+  const difficultyFilter = selectedDifficulty ? parseInt(selectedDifficulty) : 0;
+  const filtered = difficultyFilter === 0
+    ? markers
+    : markers.filter(marker => marker.difficulty === difficultyFilter);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const pseudo = await AsyncStorage.getItem('pseudo');
+      setCurrentUser(pseudo?.trim());
+    } catch (error) {
+      console.error('Error fetching pseudo:', error);
+    }
+  };
+
+  const getMarkers = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch('http://10.0.2.2:5001/markers', {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache' // Désactive le cache
+        },
+      });
+      
+      const data = await response.json();
+      
+      // Conversion explicite des IDs et vérification
+      const formattedData = data.map(marker => ({
+        ...marker,
+        _id: marker._id.toString(), // Conversion ObjectId en string
+        lat: marker.latitude,
+        lng: marker.longitude
+      }));
+      
+      setLocalMarkers(formattedData);
+      setMarkers(formattedData);
+  
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  };
+
+  const handleMarkerAction = async (action: 'delete' | 'found' | 'edit') => {
+    if (!selectedMarkerId) return;
+  
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const marker = markers.find(m => m._id === selectedMarkerId);
+      
+      if (action === 'delete') { 
+        await fetch(`http://10.0.2.2:5001/markers/${selectedMarkerId}`, {
+          method: 'DELETE',
+          headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}` 
+          },
+        });
+        await getMarkers();
+      }
+
+      if (action === 'found') 
+        Alert.alert('Bravo !', 'Vous avez trouvé la cache !');
+        const finderPseudo = await AsyncStorage.getItem('pseudo');
+        console.log('Pseudo du trouveur:', finderPseudo);
+        const response = await fetch(
+          `http://10.0.2.2:5001/markers/found/${selectedMarkerId}`,
+          {
+            method: 'DELETE',
+            headers: { 
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}` 
+            },
+            body: JSON.stringify({ finderPseudo })
+          }
+        );
+      
+        const data = await response.json();    
+        if (response.ok) {
+          console.log('[Cache trouvé], nouvelles stats :', data.user);
+          
+          await getMarkers(); // mettre à jour l’UI, retirer le marker, recharger les markers…
+        } else {
+          console.error('API Error:', data.message);
+          throw new Error(`Erreur HTTP ${response.status}: ${data.message}`);
+        }
+      
+      
+  
+      if (action === 'edit') {
+        // Pré-remplir le formulaire avec les données existantes
+        setNewMarkerData({
+          lat: marker.lat,
+          lng: marker.lng,
+          difficulty: marker.difficulty,
+          description: marker.description
+        });
+        setEditingMarkerId(selectedMarkerId);
+        setShowModal(true);
+      }
+  
+      setSelectedMarkerId(null);
+      setNewMarkerData(null); // Réinitialiser les données du marqueur
+      await getMarkers();
+  
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  };
+
+  const handleFormSubmit = async () => {
+    if (!newMarkerData) return;
+
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const pseudo = await AsyncStorage.getItem('pseudo');
+
+      const url = editingMarkerId 
+        ? `http://10.0.2.2:5001/markers/${editingMarkerId}`
+        : 'http://10.0.2.2:5001/markers';
+
+      const method = editingMarkerId ? 'PUT' : 'POST';    
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          latitude: newMarkerData.lat,
+          longitude: newMarkerData.lng,
+          difficulty: newMarkerData.difficulty,
+          description: newMarkerData.description,
+          creator: pseudo || 'Inconnu'
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+      }
+
+      await getMarkers();
+      setShowModal(false);
+      setNewMarkerData(null);
+      setEditingMarkerId(null);
+
+    } catch (error) {
+      console.error('Erreur lors de la soumission:', error.message);
+      Alert.alert('Erreur', error.message);
+    }
+  };
+
+  const handleMessage = (event) => {
+    const data = JSON.parse(event.nativeEvent.data);
+    
+    if (data.type === 'click') {
+      const { lat, lng } = data.coords;
+      setNewMarkerData({ lat, lng, difficulty: 1, description: '' });
+      setShowModal(true);
+    }
+    
+    if (data.type === 'markerClick') {
+      setSelectedMarkerId(data.markerId);
+    }
+  };
+
+  useEffect(() => {
+    getMarkers();
+    fetchCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (webViewLoaded && webViewRef.current) {
+      const toSend = {
+        type: 'addMarkers',
+        markers: filtered,
+      };
+      webViewRef.current.postMessage(JSON.stringify(toSend));
+    }
+  }, [filtered, webViewLoaded]);
+
+  const selectedMarker = markers.find(m => m._id === selectedMarkerId || m.id === selectedMarkerId);
+  const isCreator = selectedMarker?.creator === currentUser;
+
+  return (
+    <View style={styles.container}>
+      <WebView
+        ref={webViewRef}
+        onMessage={handleMessage}
+        onLoadEnd={() => setWebViewLoaded(true)}
+        source={{ html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+            <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+          </head>
+          <body style="margin:0;padding:0;height:100%;">
+            <div id="map" style="height: 100vh;"></div>
+            <script>
+              const map = L.map('map').setView([48.8566, 2.3522], 13);
+              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+              const markersLayer = L.layerGroup().addTo(map);
+
+              const difficultyColors = {
+                1: 'green',
+                2: '#f3d125',
+                3: 'orange',
+                4: 'red',
+                5: 'purple'
+              };
+
+              document.addEventListener('message', (event) => {
+                const message = JSON.parse(event.data);
+                if (message.type === 'addMarkers') {
+                  markersLayer.clearLayers();
+                  message.markers.forEach(m => {
+                    const iconHtml = \`<div style="
+                      background: \${difficultyColors[m.difficulty]};
+                      color: white;
+                      width: 30px;
+                      height: 30px;
+                      border-radius: 50%;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      font-weight: bold;
+                      font-size: 14px;"
+                    >\${m.difficulty}</div>\`;
+
+                    const marker = L.marker([m.lat, m.lng], {
+                      icon: L.divIcon({ html: iconHtml })
+                    }).addTo(markersLayer);
+
+                    marker.bindPopup(\`<b>Difficulté:</b> \${m.difficulty}<br/>
+                                      <b>Créateur:</b> \${m.creator}<br/>
+                                      <i>\${m.description}</i>\`);
+                    marker.on('popupopen', () => {
+                      window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'markerClick',
+                        markerId: m._id || m.id // Envoyez les deux formats d'ID
+                      }));
+                    });
+                  });
+                }
+              });
+
+              map.on('click', function(e) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                  type: 'click',
+                  coords: { lat: e.latlng.lat, lng: e.latlng.lng }
+                }));
+              });
+            </script>
+          </body>
+          </html>
+        `}}
+      />
+
+      <Modal visible={showModal} transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.label}>Difficulté</Text>
+            <Slider
+              minimumValue={1}
+              maximumValue={5}
+              step={1}
+              value={newMarkerData?.difficulty || 1}
+              minimumTrackTintColor={difficultyColors[newMarkerData?.difficulty || 1]}
+              maximumTrackTintColor="#ccc"
+              thumbTintColor={difficultyColors[newMarkerData?.difficulty || 1]}
+              onValueChange={(value) => setNewMarkerData(prev => ({ ...prev, difficulty: value }))}
+            />
+            <View style={styles.difficultyLabels}>
+              {[1, 2, 3, 4, 5].map(num => (
+                <Text key={num} style={{ 
+                  color: difficultyColors[num],
+                  width: 30,
+                  textAlign: 'center'
+                }}>{num}</Text>
+              ))}
+            </View>
+
+            <Text style={styles.label}>Description</Text>
+            <TextInput
+              value={newMarkerData?.description || ''}
+              onChangeText={(text) => setNewMarkerData(prev => ({ ...prev, description: text }))}
+              style={styles.input}
+              multiline
+            />
+
+            <View style={styles.buttonRow}>
+              <Button title="Annuler" onPress={() => setShowModal(false)} />
+              <Button title={editingMarkerId ? "Modifier" : "Ajouter"} onPress={handleFormSubmit} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {selectedMarkerId && currentUser && (
+      <View style={[
+        styles.markerActions,
+        !isCreator && styles.singleAction
+      ]}>
+        {isCreator ? (
+          <>
+            <Button title="Modifier" onPress={() => handleMarkerAction('edit')} style={{ marginRight: 10 }} />
+            <Button title="Supprimer" color="red" onPress={() => handleMarkerAction('delete')} />
+          </>
+        ) : (
+          <Button 
+            title="Trouvé !" 
+            color="green" 
+            onPress={() => handleMarkerAction('found')}
+            buttonStyle={styles.foundButton} 
+          />
+        )}
+      </View>
+    )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    position: 'relative',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+  },
+  difficultyLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 10,
+    paddingHorizontal: 5,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginVertical: 10,
+    minHeight: 100,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 10,
+  },
+  markerActions: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'white',
+    elevation: 5, 
+    zIndex: 100,
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+  },
+  singleAction: {
+    justifyContent: 'center',
+  },
+  foundButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'green', 
+    paddingVertical: 5,
+    paddingHorizontal: 20,
+  },
+
+});
 
 export default WebMap;

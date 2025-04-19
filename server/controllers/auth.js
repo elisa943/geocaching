@@ -39,8 +39,8 @@ exports.register = async (req, res) => {
     }
 
     // Créer le nouvel utilisateur avec pseudo, email et mot de passe
-    const user = await User.create({ email, password, pseudo });
-    
+    const user = await User.create({ email, password, pseudo, points: 0, caches_created: 0, caches_found: 0, mean_difficulty: 0 });
+
     // Envoyer le token après l'enregistrement
     sendToken(user, 201, res);
 
@@ -91,7 +91,7 @@ const sendToken = (user, statusCode, res) => {
 exports.getMe = async (req, res) => {
   try {
     // Ne renvoyez que les données nécessaires
-    const user = await User.findById(req.user.id).select('pseudo email createdAt');
+    const user = await User.findById(req.user.id).select('pseudo email points caches_created caches_found mean_difficulty');
     res.status(200).json({
       success: true,
       data: user

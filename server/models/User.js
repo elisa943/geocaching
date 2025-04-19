@@ -25,7 +25,19 @@ const UserSchema = new mongoose.Schema({
   points: {
     type: Number,
     default: 0
-  }
+  }, 
+  caches_created: {
+    type: Number,
+    default: 0
+  },
+  caches_found: {
+    type: Number,
+    default: 0
+  }, 
+  mean_difficulty: {
+    type: Number,
+    default: 0
+  },
 });
 
 // Hash du mot de passe avant sauvegarde
