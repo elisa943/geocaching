@@ -23,15 +23,15 @@ export default function HomeScreen() {
 
         <View style={styles.features}>
           <View style={styles.featureItem}>
-            <FontAwesome name="map-marker" size={20} color="#2e86ab" />
+            <FontAwesome name="map-marker" size={20} color="#293B3A" />
             <Text style={styles.featureText}>Découvrez des caches près de chez vous</Text>
           </View>
           <View style={styles.featureItem}>
-            <FontAwesome name="lock" size={20} color="#2e86ab" />
+            <FontAwesome name="lock" size={20} color="#293B3A" />
             <Text style={styles.featureText}>Système d'authentification sécurisé</Text>
           </View>
           <View style={styles.featureItem}>
-            <FontAwesome name="trophy" size={20} color="#2e86ab" />
+            <FontAwesome name="trophy" size={20} color="#293B3A" />
             <Text style={styles.featureText}>Système de points et classements</Text>
           </View>
         </View>
@@ -62,88 +62,107 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: 'rgb(226, 219, 199)',
   },
   logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 20,
+    width: 120,
+    height: 120,
+    marginBottom: 15,
+    shadowColor: 'rgba(41, 59, 58, 0.2)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#2e86ab',
-    marginBottom: 10,
+    color: 'rgb(41, 59, 58)',
+    marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 18,
+    color: 'rgb(101, 101, 101)',
     marginBottom: 30,
     textAlign: 'center',
+    lineHeight: 24,
+    maxWidth: '90%',
   },
   descriptionBox: {
     backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
+    borderRadius: 16,
+    padding: 24,
     width: '100%',
     marginBottom: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: 'rgba(41, 59, 58, 0.1)',
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowRadius: 16,
+    elevation: 5,
   },
   description: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#444',
-    marginBottom: 20,
+    fontSize: 16,
+    lineHeight: 24,
+    color: 'rgb(79, 79, 79)',
+    marginBottom: 10,
+    marginLeft: 10,
+    marginRight: 10,
     textAlign: 'center',
   },
   features: {
+    marginLeft: 10,
+    marginRight: 10,
     marginTop: 15,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
+    paddingVertical: 8,
   },
   featureText: {
-    marginLeft: 10,
-    fontSize: 14,
-    color: '#555',
+    marginLeft: 12,
+    fontSize: 15,
+    color: 'rgb(41, 59, 58)',
+    flexShrink: 1,
   },
   buttonsContainer: {
     flexDirection: 'row',
     width: '100%',
     justifyContent: 'space-between',
     marginBottom: 20,
+    gap: 12,
   },
   button: {
-    backgroundColor: '#2e86ab',
-    paddingVertical: 12,
+    backgroundColor: 'rgb(41, 59, 58)',
+    paddingVertical: 16,
     paddingHorizontal: 25,
-    borderRadius: 25,
+    borderRadius: 14,
     flex: 1,
-    marginHorizontal: 5,
-    alignItems: 'center',
+    elevation: 2,
+    shadowColor: 'rgba(0,0,0,0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   secondaryButton: {
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#2e86ab',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: 'rgb(41, 59, 58)',
   },
   buttonText: {
     color: 'white',
     fontWeight: '600',
+    fontSize: 16,
   },
   secondaryButtonText: {
-    color: '#2e86ab',
+    color: 'rgb(41, 59, 58)',
   },
   learnMore: {
-    color: '#2e86ab',
+    color: '#D97D54',
+    fontWeight: '500',
     textDecorationLine: 'underline',
     marginTop: 10,
+    fontSize: 15,
   },
 });

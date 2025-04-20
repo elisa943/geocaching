@@ -35,8 +35,6 @@ router.post('/', async (req, res) => {
 // GET marker by ID
 router.put('/:id', async (req, res) => {
     try {
-        console.log('Updating marker with id:', req.params.id);
-        
         const updated = await Marker.findByIdAndUpdate(
             req.params.id,
             {

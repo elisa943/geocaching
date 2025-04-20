@@ -1,18 +1,19 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, Modal, TextInput, Text, Button, Alert } from 'react-native';
+import { View, StyleSheet, Modal, TextInput, Text, Button, Alert, TouchableOpacity} from 'react-native';
 import WebView from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
+import * as Location from 'expo-location';
 
 const difficultyColors = {
-  1: 'green',
-  2: '#f3d125',
-  3: 'orange',
-  4: 'red',
-  5: 'purple',
+  1: '#4CAF50',  // Vert moderne
+  2: '#FFC107',  // Jaune
+  3: '#FF9800',  // Orange
+  4: '#F44336',  // Rouge
+  5: '#9C27B0'   // Violet
 };
 
-const WebMap = ({ selectedDifficulty, setMarkers }) => {
+const WebMap = ({ selectedDifficulty, setMarkers, onRef }) => {
   const [webViewLoaded, setWebViewLoaded] = useState(false);
   const [markers, setLocalMarkers] = useState([]);
   const webViewRef = useRef(null);
@@ -21,11 +22,29 @@ const WebMap = ({ selectedDifficulty, setMarkers }) => {
   const [showModal, setShowModal] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [editingMarkerId, setEditingMarkerId] = useState(null);
+  const [userLocation, setUserLocation] = useState(null); 
 
   const difficultyFilter = selectedDifficulty ? parseInt(selectedDifficulty) : 0;
   const filtered = difficultyFilter === 0
     ? markers
     : markers.filter(marker => marker.difficulty === difficultyFilter);
+
+    // Exposez cette fonction via la ref
+    const recenterMap = () => {
+      if (userLocation && webViewRef.current) {
+        webViewRef.current.postMessage(JSON.stringify({
+          type: 'recenter',
+          coords: userLocation
+        }));
+      }
+    };
+
+    // Transmettez la ref au parent
+    useEffect(() => {
+      if (onRef) {
+        onRef({ recenterMap });
+      }
+    }, [onRef]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -82,7 +101,7 @@ const WebMap = ({ selectedDifficulty, setMarkers }) => {
         await getMarkers();
       }
 
-      if (action === 'found') 
+      if (action === 'found') {
         Alert.alert('Bravo !', 'Vous avez trouvé la cache !');
         const finderPseudo = await AsyncStorage.getItem('pseudo');
         console.log('Pseudo du trouveur:', finderPseudo);
@@ -107,7 +126,7 @@ const WebMap = ({ selectedDifficulty, setMarkers }) => {
           console.error('API Error:', data.message);
           throw new Error(`Erreur HTTP ${response.status}: ${data.message}`);
         }
-      
+      }
       
   
       if (action === 'edit') {
@@ -190,6 +209,27 @@ const WebMap = ({ selectedDifficulty, setMarkers }) => {
   };
 
   useEffect(() => {
+    const getLocation = async () => {
+      try {
+        // Demander la permission
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Permission de localisation refusée');
+          return;
+        }
+
+        // Récupérer la position
+        let location = await Location.getCurrentPositionAsync({});
+        setUserLocation({
+          lat: location.coords.latitude,
+          lng: location.coords.longitude
+        });
+      } catch (error) {
+        console.error('Erreur de localisation:', error);
+      }
+    };
+
+    getLocation();
     getMarkers();
     fetchCurrentUser();
   }, []);
@@ -199,16 +239,18 @@ const WebMap = ({ selectedDifficulty, setMarkers }) => {
       const toSend = {
         type: 'addMarkers',
         markers: filtered,
+        userLocation: userLocation
       };
       webViewRef.current.postMessage(JSON.stringify(toSend));
     }
-  }, [filtered, webViewLoaded]);
+  }, [filtered, webViewLoaded, userLocation]);
 
   const selectedMarker = markers.find(m => m._id === selectedMarkerId || m.id === selectedMarkerId);
   const isCreator = selectedMarker?.creator === currentUser;
 
   return (
     <View style={styles.container}>
+
       <WebView
         ref={webViewRef}
         onMessage={handleMessage}
@@ -222,24 +264,72 @@ const WebMap = ({ selectedDifficulty, setMarkers }) => {
             <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
             <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
           </head>
+          <style>
+              .custom-icon {
+                width: 36px;
+                height: 36px;
+                border-radius: 50% 50% 50% 0;
+                transform: rotate(-45deg);
+                position: relative;
+                background: {color};
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              .custom-icon::after {
+                content: "{difficulty}";
+                transform: rotate(45deg);
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+                text-shadow: 0 0 2px rgba(0,0,0,0.5);
+              }
+              .leaflet-popup-content {
+                font-family: Arial, sans-serif;
+                min-width: 200px;
+              }
+              .leaflet-popup-content-wrapper {
+                border-radius: 8px;
+              }
+          </style>
           <body style="margin:0;padding:0;height:100%;">
             <div id="map" style="height: 100vh;"></div>
             <script>
-              const map = L.map('map').setView([48.8566, 2.3522], 13);
+              let defaultPosition = [48.8566, 2.3522]; // Paris par défaut
+              const map = L.map('map').setView(defaultPosition, 13);
               L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
               const markersLayer = L.layerGroup().addTo(map);
 
               const difficultyColors = {
-                1: 'green',
-                2: '#f3d125',
-                3: 'orange',
-                4: 'red',
-                5: 'purple'
+                1: '#4CAF50',  // Vert moderne
+                2: '#FFC107',  // Jaune
+                3: '#FF9800',  // Orange
+                4: '#F44336',  // Rouge
+                5: '#9C27B0'   // Violet
               };
 
-              document.addEventListener('message', (event) => {
+              document.addEventListener('message', (event) => { // Écoute des messages du WebView
                 const message = JSON.parse(event.data);
+
+                if (message.type === 'recenter') {
+                  map.setView([message.coords.lat, message.coords.lng], 13);
+                }
                 if (message.type === 'addMarkers') {
+
+                  // Si on a une position utilisateur, centrer la carte dessus
+                  if (message.userLocation) {
+                    map.setView([message.userLocation.lat, message.userLocation.lng], 13);
+                    
+                    // Optionnel: Ajouter un marqueur pour la position de l'utilisateur
+                    L.marker([message.userLocation.lat, message.userLocation.lng], {
+                      icon: L.divIcon({
+                        html: '<div style="background:#4285F4;color:white;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;">👤</div>'
+                      })
+                    }).addTo(map).bindPopup('Votre position');
+                  }
+
+                  // Ajout des marqueurs
                   markersLayer.clearLayers();
                   message.markers.forEach(m => {
                     const iconHtml = \`<div style="
@@ -259,13 +349,26 @@ const WebMap = ({ selectedDifficulty, setMarkers }) => {
                       icon: L.divIcon({ html: iconHtml })
                     }).addTo(markersLayer);
 
-                    marker.bindPopup(\`<b>Difficulté:</b> \${m.difficulty}<br/>
-                                      <b>Créateur:</b> \${m.creator}<br/>
-                                      <i>\${m.description}</i>\`);
+                    marker.bindPopup(
+                      \`<div style="padding:6px">
+                        <div style="display:flex;align-items:center;margin-bottom:8px">
+                          <div style="width:16px;height:16px;border-radius:50%;background:\${difficultyColors[m.difficulty]};margin-right:8px"></div>
+                          <span style="font-weight:bold">Difficulté: \${m.difficulty}/5</span>
+                        </div>
+                        <div style="margin-bottom:8px">
+                          <span style="color:#666">Crée par </span>
+                          <span style="font-weight:bold">\${m.creator}</span>
+                        </div>
+                        <div style="padding:8px;background:#f5f7fa;border-radius:6px">
+                          \${m.description || '<i>Aucune description</i>'}
+                        </div>
+                      </div>\`
+                    );
+                    
                     marker.on('popupopen', () => {
                       window.ReactNativeWebView.postMessage(JSON.stringify({
                         type: 'markerClick',
-                        markerId: m._id || m.id // Envoyez les deux formats d'ID
+                        markerId: m._id || m.id
                       }));
                     });
                   });
@@ -287,38 +390,57 @@ const WebMap = ({ selectedDifficulty, setMarkers }) => {
       <Modal visible={showModal} transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {editingMarkerId ? 'Modifier la cache' : 'Nouvelle cache'}
+            </Text>
+            
             <Text style={styles.label}>Difficulté</Text>
+
             <Slider
               minimumValue={1}
               maximumValue={5}
               step={1}
               value={newMarkerData?.difficulty || 1}
               minimumTrackTintColor={difficultyColors[newMarkerData?.difficulty || 1]}
-              maximumTrackTintColor="#ccc"
+              maximumTrackTintColor="#E0E0E0"
               thumbTintColor={difficultyColors[newMarkerData?.difficulty || 1]}
               onValueChange={(value) => setNewMarkerData(prev => ({ ...prev, difficulty: value }))}
             />
-            <View style={styles.difficultyLabels}>
+
+            <View style={styles.difficultyBadges}>
               {[1, 2, 3, 4, 5].map(num => (
-                <Text key={num} style={{ 
-                  color: difficultyColors[num],
-                  width: 30,
-                  textAlign: 'center'
-                }}>{num}</Text>
-              ))}
+              <View 
+                key={num} 
+                style={[
+                  styles.difficultyBadge,
+                  { 
+                    backgroundColor: difficultyColors[num],
+                    opacity: num === (newMarkerData?.difficulty || 1) ? 1 : 0.3
+                  }
+                ]}
+              >
+                <Text style={styles.difficultyText}>{num}</Text>
+              </View>
+            ))}
+          </View>
+
+            {/* Section Description */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Description</Text>
+              <TextInput
+                placeholder="Décrivez votre cache..."
+                placeholderTextColor="#999"
+                value={newMarkerData?.description || ''}
+                onChangeText={(text) => setNewMarkerData(prev => ({ ...prev, description: text }))}
+                style={styles.input}
+                multiline
+                numberOfLines={4}
+              />
             </View>
 
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              value={newMarkerData?.description || ''}
-              onChangeText={(text) => setNewMarkerData(prev => ({ ...prev, description: text }))}
-              style={styles.input}
-              multiline
-            />
-
             <View style={styles.buttonRow}>
-              <Button title="Annuler" onPress={() => setShowModal(false)} />
-              <Button title={editingMarkerId ? "Modifier" : "Ajouter"} onPress={handleFormSubmit} />
+              <Button title="Annuler" onPress={() => setShowModal(false)} color="#D97D54" />
+              <Button title={editingMarkerId ? "Modifier" : "Ajouter"} onPress={handleFormSubmit} color="#293B3A"/>
             </View>
           </View>
         </View>
@@ -331,8 +453,8 @@ const WebMap = ({ selectedDifficulty, setMarkers }) => {
       ]}>
         {isCreator ? (
           <>
-            <Button title="Modifier" onPress={() => handleMarkerAction('edit')} style={{ marginRight: 10 }} />
-            <Button title="Supprimer" color="red" onPress={() => handleMarkerAction('delete')} />
+            <Button title="Modifier" onPress={() => handleMarkerAction('edit')} style={{ marginRight: 10 }} color="#2e86ab" />
+            <Button title="Supprimer" color="red" onPress={() => handleMarkerAction('delete')} color="#F44336" />
           </>
         ) : (
           <Button 
@@ -391,8 +513,7 @@ const styles = StyleSheet.create({
     right: 20,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: 'white',
-    elevation: 5, 
+    backgroundColor: 'rgba(255, 255, 255, 0)', // background transparent
     zIndex: 100,
     flexDirection: 'row',
     justifyContent: 'space-evenly',
@@ -408,7 +529,47 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 20,
   },
-
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#293B3A',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  section: {
+    marginBottom: 20,
+  },
+  difficultyBadges: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  difficultyBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  difficultyButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 12,
+  },
+  difficultyButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  difficultyText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
 });
 
 export default WebMap;
