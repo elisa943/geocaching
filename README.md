@@ -1,7 +1,6 @@
 # 🌍 GeoCache - Projet PG219
 
 **Application mobile de géocaching développée avec Node.js, MongoDB et React Native**  
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 <p align="center">
   <img src="./images/ecran_accueil.png" width="200" alt="Écran d'accueil">
