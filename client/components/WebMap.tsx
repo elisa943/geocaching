@@ -6,45 +6,61 @@ import Slider from '@react-native-community/slider';
 import * as Location from 'expo-location';
 
 const difficultyColors = {
-  1: '#4CAF50',  // Vert moderne
-  2: '#FFC107',  // Jaune
-  3: '#FF9800',  // Orange
-  4: '#F44336',  // Rouge
-  5: '#9C27B0'   // Violet
+  1: '#D5C88F',  
+  2: '#4D9E96',  
+  3: '#D97D54',  
+  4: '#C45C3D',  
+  5: '#293B3A'   
 };
 
 const WebMap = ({ selectedDifficulty, setMarkers, onRef }) => {
-  const [webViewLoaded, setWebViewLoaded] = useState(false);
-  const [markers, setLocalMarkers] = useState([]);
-  const webViewRef = useRef(null);
-  const [newMarkerData, setNewMarkerData] = useState(null);
-  const [selectedMarkerId, setSelectedMarkerId] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [editingMarkerId, setEditingMarkerId] = useState(null);
-  const [userLocation, setUserLocation] = useState(null); 
+    const [webViewLoaded, setWebViewLoaded] = useState(false);
+    const [markers, setLocalMarkers] = useState([]);
+    const webViewRef = useRef(null);
+    const [newMarkerData, setNewMarkerData] = useState(null);
+    const [selectedMarkerId, setSelectedMarkerId] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [editingMarkerId, setEditingMarkerId] = useState(null);
+    const [userLocation, setUserLocation] = useState(null); 
 
-  const difficultyFilter = selectedDifficulty ? parseInt(selectedDifficulty) : 0;
-  const filtered = difficultyFilter === 0
-    ? markers
-    : markers.filter(marker => marker.difficulty === difficultyFilter);
+    const difficultyFilter = selectedDifficulty ? parseInt(selectedDifficulty) : 0;
+    const filtered = difficultyFilter === 0
+      ? markers
+      : markers.filter(marker => marker.difficulty === difficultyFilter);
 
-    // Exposez cette fonction via la ref
     const recenterMap = () => {
       if (userLocation && webViewRef.current) {
-        webViewRef.current.postMessage(JSON.stringify({
-          type: 'recenter',
-          coords: userLocation
-        }));
+        webViewRef.current.postMessage(
+          JSON.stringify({
+            type: 'recenter',
+            coords: userLocation, // Envoie les coordonnées de l'utilisateur
+          })
+        );
+      } else {
+        console.error('Impossible de recentrer la carte : localisation utilisateur non disponible.');
       }
     };
 
-    // Transmettez la ref au parent
-    useEffect(() => {
-      if (onRef) {
-        onRef({ recenterMap });
+    const addMarkerAtUserLocation = () => { // Fonction pour ajouter un marqueur à la position de l'utilisateur
+      if (userLocation) {
+        setNewMarkerData({
+          lat: userLocation.lat,
+          lng: userLocation.lng,
+          difficulty: 1, // Valeur par défaut
+          description: '', // Valeur par défaut
+        });
+        setShowModal(true); // Ouvre le modal
+      } else {
+        Alert.alert('Erreur', 'La localisation de l\'utilisateur n\'est pas disponible.');
       }
-    }, [onRef]);
+    };
+
+    useEffect(() => { // transmet les méthodes recenterMap et addMarkerAtUserLocation au parent
+      if (onRef) {
+        onRef({ recenterMap, addMarkerAtUserLocation }); // Expose les méthodes
+      }
+    }, [onRef, recenterMap, addMarkerAtUserLocation]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -84,8 +100,10 @@ const WebMap = ({ selectedDifficulty, setMarkers, onRef }) => {
   };
 
   const handleMarkerAction = async (action: 'delete' | 'found' | 'edit') => {
+    
     if (!selectedMarkerId) return;
-  
+    console.log('action:', action);
+    
     try {
       const token = await AsyncStorage.getItem('userToken');
       const marker = markers.find(m => m._id === selectedMarkerId);
@@ -99,9 +117,10 @@ const WebMap = ({ selectedDifficulty, setMarkers, onRef }) => {
           },
         });
         await getMarkers();
+        setNewMarkerData(null); // Réinitialiser les données du marqueur
       }
 
-      if (action === 'found') {
+      else if (action === 'found') {
         Alert.alert('Bravo !', 'Vous avez trouvé la cache !');
         const finderPseudo = await AsyncStorage.getItem('pseudo');
         console.log('Pseudo du trouveur:', finderPseudo);
@@ -119,30 +138,29 @@ const WebMap = ({ selectedDifficulty, setMarkers, onRef }) => {
       
         const data = await response.json();    
         if (response.ok) {
-          console.log('[Cache trouvé], nouvelles stats :', data.user);
-          
           await getMarkers(); // mettre à jour l’UI, retirer le marker, recharger les markers…
         } else {
           console.error('API Error:', data.message);
           throw new Error(`Erreur HTTP ${response.status}: ${data.message}`);
         }
+
+        setNewMarkerData(null); // Réinitialiser les données du marqueur
       }
       
   
-      if (action === 'edit') {
+      else if (action === 'edit') {
         // Pré-remplir le formulaire avec les données existantes
         setNewMarkerData({
           lat: marker.lat,
           lng: marker.lng,
           difficulty: marker.difficulty,
-          description: marker.description
+          description: marker.description,
         });
         setEditingMarkerId(selectedMarkerId);
         setShowModal(true);
       }
   
       setSelectedMarkerId(null);
-      setNewMarkerData(null); // Réinitialiser les données du marqueur
       await getMarkers();
   
     } catch (error) {
@@ -266,8 +284,8 @@ const WebMap = ({ selectedDifficulty, setMarkers, onRef }) => {
           </head>
           <style>
               .custom-icon {
-                width: 36px;
-                height: 36px;
+                width: 32px;
+                height: 32px;
                 border-radius: 50% 50% 50% 0;
                 transform: rotate(-45deg);
                 position: relative;
@@ -282,7 +300,7 @@ const WebMap = ({ selectedDifficulty, setMarkers, onRef }) => {
                 transform: rotate(45deg);
                 color: white;
                 font-weight: bold;
-                font-size: 14px;
+                font-size: 12px;
                 text-shadow: 0 0 2px rgba(0,0,0,0.5);
               }
               .leaflet-popup-content {
@@ -291,23 +309,37 @@ const WebMap = ({ selectedDifficulty, setMarkers, onRef }) => {
               }
               .leaflet-popup-content-wrapper {
                 border-radius: 8px;
+                box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+              }
+              .leaflet-popup-tip {
+                background: rgba(255, 255, 255, 1);
               }
           </style>
+          
           <body style="margin:0;padding:0;height:100%;">
             <div id="map" style="height: 100vh;"></div>
             <script>
-              let defaultPosition = [48.8566, 2.3522]; // Paris par défaut
+              let defaultPosition = [45.4371908, 12.3345898]; // Venise
               const map = L.map('map').setView(defaultPosition, 13);
               L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
               const markersLayer = L.layerGroup().addTo(map);
 
               const difficultyColors = {
-                1: '#4CAF50',  // Vert moderne
-                2: '#FFC107',  // Jaune
-                3: '#FF9800',  // Orange
-                4: '#F44336',  // Rouge
-                5: '#9C27B0'   // Violet
+                1: '#D5C88F',  
+                2: '#4D9E96',  
+                3: '#D97D54',  
+                4: '#C45C3D',  
+                5: '#293B3A'   
               };
+
+              document.addEventListener('message', (event) => {
+                const message = JSON.parse(event.data);
+
+                if (message.type === 'recenter') {
+                  const { lat, lng } = message.coords;
+                  map.setView([lat, lng], 13); // Recentre la carte sur les coordonnées fournies
+                }
+              });
 
               document.addEventListener('message', (event) => { // Écoute des messages du WebView
                 const message = JSON.parse(event.data);
@@ -324,7 +356,7 @@ const WebMap = ({ selectedDifficulty, setMarkers, onRef }) => {
                     // Optionnel: Ajouter un marqueur pour la position de l'utilisateur
                     L.marker([message.userLocation.lat, message.userLocation.lng], {
                       icon: L.divIcon({
-                        html: '<div style="background:#4285F4;color:white;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;">👤</div>'
+                        html: '<div style="background:#4285F4;color:black;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;margin-top:-15px;margin-left:-15px;">👤</div>'
                       })
                     }).addTo(map).bindPopup('Votre position');
                   }
@@ -342,7 +374,10 @@ const WebMap = ({ selectedDifficulty, setMarkers, onRef }) => {
                       align-items: center;
                       justify-content: center;
                       font-weight: bold;
-                      font-size: 14px;"
+                      font-size: 14px;
+                      margin-top: -5px;
+                      margin-left: -5px;
+                      "
                     >\${m.difficulty}</div>\`;
 
                     const marker = L.marker([m.lat, m.lng], {
@@ -400,8 +435,8 @@ const WebMap = ({ selectedDifficulty, setMarkers, onRef }) => {
               minimumValue={1}
               maximumValue={5}
               step={1}
-              value={newMarkerData?.difficulty || 1}
-              minimumTrackTintColor={difficultyColors[newMarkerData?.difficulty || 1]}
+              value={newMarkerData?.difficulty}
+              minimumTrackTintColor={difficultyColors[newMarkerData?.difficulty]}
               maximumTrackTintColor="#E0E0E0"
               thumbTintColor={difficultyColors[newMarkerData?.difficulty || 1]}
               onValueChange={(value) => setNewMarkerData(prev => ({ ...prev, difficulty: value }))}

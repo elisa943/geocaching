@@ -13,6 +13,7 @@ router.get('/', async (req, res) => {
 
 // POST new marker
 router.post('/', async (req, res) => {
+    console.log('Nouveau marqueur reçu !');
     try {
       const { latitude, longitude, difficulty, description, creator } = req.body;
   

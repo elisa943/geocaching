@@ -16,13 +16,13 @@ const ExploreScreen = () => {
   const navigation = useNavigation();
   const webMapRef = useRef(null);
 
-  const handleRecenter = () => {
-    if (webMapRef.current) {
-      webMapRef.current.recenterMap();
-    }
-  };
-
-
+const handleRecenter = () => {
+  if (webMapRef.current && typeof webMapRef.current.recenterMap === 'function') {
+    webMapRef.current.recenterMap(); // Appelle la méthode recenterMap exposée par WebMap
+  } else {
+    console.error('La méthode recenterMap n\'est pas disponible.');
+  }
+};
   useEffect(() => {
     if (authStatus === 'checking') {
       console.log('Vérification de l\'état d\'authentification...');
@@ -72,7 +72,10 @@ const ExploreScreen = () => {
 
         {/* Carte */}
         <View style={styles.mapContainer}>
-          <WebMap selectedDifficulty={selectedDifficulty} setMarkers={setMarkers}/>
+          <WebMap 
+          selectedDifficulty={selectedDifficulty} 
+          setMarkers={setMarkers} 
+          onRef={(ref) => (webMapRef.current = ref)}/>
         </View>
 
         {/* Filtre FAB */}
@@ -83,10 +86,24 @@ const ExploreScreen = () => {
           <Ionicons name="filter" size={24} color="white" />
         </TouchableOpacity>
 
-        {/* Ajoute un cache sur la localisation de l'user*/}
+        {/* Recentrer la carte */}
+        <TouchableOpacity
+          style={[styles.fab, styles.centerFab]}
+          onPress={handleRecenter}
+        >
+          <MaterialIcons name="my-location" size={28} color="white" />
+        </TouchableOpacity>
+
+        {/* Ajoute un cache sur la localisation de l'user */}
         <TouchableOpacity 
           style={styles.fab}
-          onPress={() => navigation.navigate('addCache')}
+          onPress={() => {
+            if (webMapRef.current && webMapRef.current.addMarkerAtUserLocation) {
+              webMapRef.current.addMarkerAtUserLocation(); // Appelle la méthode exposée par WebMap
+            } else {
+              console.error('La méthode addMarkerAtUserLocation n\'est pas disponible.');
+            }
+          }}
         >
           <MaterialIcons name="add-location-alt" size={28} color="white" />
         </TouchableOpacity>
@@ -179,10 +196,18 @@ const styles = StyleSheet.create({
   mapContainer: {
     flex: 1,
   },
+  filterFab: {
+    bottom: 200,
+    backgroundColor: '#D97D54',
+  },
+  centerFab: {
+    bottom: 120, // Position intermédiaire entre `filterFab` et `fab`
+    backgroundColor: '#4D9E96', // Couleur différente pour le distinguer
+  },
   fab: {
     position: 'absolute',
     right: 24,
-    bottom: 24,
+    bottom: 40,
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -194,10 +219,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 6,
-  },
-  filterFab: {
-    bottom: 90,
-    backgroundColor: '#D97D54',
   },
   modalOverlay: {
     flex: 1,
