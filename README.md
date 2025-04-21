@@ -14,7 +14,7 @@ L'objectif de ce projet est de proposer une application permettant aux utilisate
 
 ### 🔐 Authentification
 - Inscription, connexion, et déconnexion sécurisée avec les jetons JWT (24h de validité)
-- Hachage des mots de passe avec bcrypt
+- Hachage des mots de passe
 - Protection des routes backend par middleware d'authentification
 - Récupération automatique des infos utilisateur à partir du token
 
@@ -22,13 +22,14 @@ L'objectif de ce projet est de proposer une application permettant aux utilisate
 - Attributs des caches : `id`, `latitude`, `longitude`, `creator`, `description`, `difficulty`
 - Ajout/modification par le propriétaire uniquement
 - Suppression automatique quand un cache est découvert
-- Validation des coordonnées GPS
+- Bouton pour ajouter d'un cache à la localisation du joueur 
 
 ### 📍 Marqueurs & Cartographie
 - Carte interactive avec Leaflet.js dans WebView
 - Synchronisation en temps réel avec la base MongoDB
+- Localisation du joueur pour afficher les caches à proximité 
+- Recentrage de la carte à l'aide d'un des boutons latéraux
 - Filtrage par difficulté (1-5 étoiles)
-- Popups d'information cliquables
 
 ### 📊 Statistiques & Classement
 | Difficulté | Points |
@@ -40,8 +41,8 @@ L'objectif de ce projet est de proposer une application permettant aux utilisate
 | ⭐⭐⭐⭐⭐    | 100    |
 
 - Classement général des joueurs
-- Historique des découvertes
-- Moyenne de difficulté personnelle
+- Comptage des caches trouvées et créées 
+- Moyenne de difficulté personnelle des caches trouvées 
 
 ## 🚀 Installation & Lancement
 
