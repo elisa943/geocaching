@@ -81,7 +81,6 @@ geocaching
 │   ├── constants
 │   ├── expo-env.d.ts
 │   ├── hooks
-│   ├── node_modules
 │   ├── package.json
 │   ├── scripts
 │   ├── tsconfig.json
