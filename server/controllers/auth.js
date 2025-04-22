@@ -38,6 +38,15 @@ exports.register = async (req, res) => {
       });
     }
 
+    // vérifier que l'email est valide
+    const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        error: "Email invalide"
+      });
+    }
+
     // Créer le nouvel utilisateur avec pseudo, email et mot de passe
     const user = await User.create({ email, password, pseudo, points: 0, caches_created: 0, caches_found: 0, mean_difficulty: 0 });
 
@@ -47,7 +56,7 @@ exports.register = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      error: "Erreur serveur - Veuillez réessayer"
+      error: "Erreur - Veuillez réessayer"
     });
   }
 };

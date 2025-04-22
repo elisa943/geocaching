@@ -47,7 +47,7 @@ UserSchema.pre('save', async function(next) {
   next();
 });
 
-// Génération du token JWT (valable 24h)
+// Génération du token JWT (valable 24h) : sert à l'authentification
 UserSchema.methods.generateToken = function() {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
     expiresIn: '24h'
