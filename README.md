@@ -14,8 +14,9 @@ L'objectif de ce projet est de proposer une application permettant aux utilisate
 
 ### 🔐 Authentification
 - Inscription, connexion, et déconnexion sécurisée avec les jetons JWT (24h de validité)
+- Vérification des informations lors de l'inscription (mail valable, pseudo unique, mot de passe un minimum robuste)
 - Hachage des mots de passe
-- Protection des routes backend par middleware d'authentification
+- Protection des routes backend par middleware d'authentification 
 - Récupération automatique des infos utilisateur à partir du token
 
 ### 🗺️ Géocaches
